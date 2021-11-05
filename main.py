@@ -80,13 +80,15 @@ def train(epoch):
 
         print("===> Epoch[{}]({}/{}): Loss: {:.4f}.".format(epoch, iteration, len(train_data_loader), loss.data))
 
-print('---Loading dataset---')
-train_dir = os.path.join(arg.image_dir,'train\\')
-train_set = DatasetFromFolder(train_dir, arg.upscale_fact, crop(), transform())
-train_data_loader = DataLoader(dataset=train_set,batch_size=arg.batch_size, shuffle=True)
-#show_sample(train_data_loader)
 
-model = CNN(channels=3, in_size=arg.crop_size//arg.upscale_fact, out_size=arg.crop_size)
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=arg.rate)
-train(0)
+if __name__ == '__main__':
+    print('---Loading dataset---')
+    train_dir = os.path.join(arg.image_dir,'train\\')
+    train_set = DatasetFromFolder(train_dir, arg.upscale_fact, crop(), transform())
+    train_data_loader = DataLoader(dataset=train_set,batch_size=arg.batch_size, shuffle=True)
+    #show_sample(train_data_loader)
+
+    model = CNN(channels=3, in_size=arg.crop_size//arg.upscale_fact, out_size=arg.crop_size)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=arg.rate)
+    train(0)

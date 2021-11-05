@@ -47,7 +47,7 @@ class Net(nn.Module):
         x = self.lay1(x)
         x = self.lay2(x)
 
-        
+
         x = self.cnn_conv(x)
         x = self.cnn_deconv(x)
         return x
