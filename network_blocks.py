@@ -70,6 +70,9 @@ class DeconvBlock(nn.Module):
             return x
 
 
+# up and down blocks taken from repo:
+# https://github.com/alterzero/DBPN-Pytorch/blob/master/base_networks.py
+# believe they are used to extract features from various sized blocks of pixels
 class UpBlock(torch.nn.Module):
     def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, activation='prelu', norm=None):
         super(UpBlock, self).__init__()
