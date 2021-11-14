@@ -88,7 +88,7 @@ if __name__ == '__main__':
     train_data_loader = DataLoader(dataset=train_set,batch_size=arg.batch_size, shuffle=True)
     #show_sample(train_data_loader)
 
-    model = CNN(channels=3, in_size=arg.crop_size//arg.upscale_fact, out_size=arg.crop_size)
+    model = CNN(channels=3, filters=64, features=256, scale_fact=arg.upscale_fact)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=arg.rate)
     train(0)
