@@ -19,13 +19,16 @@ from model import Net as CNN
 # Parse settings for training
 parser = argparse.ArgumentParser(description="Super Resolution Network Training")
 parser.add_argument('--upscale_fact', type=int, default=2)
-parser.add_argument('--batch_size', type=int, default=20)
-parser.add_argument('--num_epochs', type=int, default=100)
+parser.add_argument('--batch_size', type=int, default=10)
+parser.add_argument('--num_epochs', type=int, default=10)
 parser.add_argument('--crop_size', type=int, default=500)
 parser.add_argument('--seed', type=int, default=28)
 parser.add_argument('--rate', type=float, default=1e-4)
-parser.add_argument('--image_dir', type=str, default='D:\div2k')
-parser.add_argument('--optimizer', type=str, default='adam',choices=['adam','sgd','rmsprop'])
+parser.add_argument('--image_dir', type=str, default='D:/div2k')
+parser.add_argument('--save_dir', type=str, default='D:/div2k/')
+parser.add_argument('--pretrain_path', type=str, default=None)
+parser.add_argument('--optimizer', type=str, default='adam',choices=['adam', 'sgd', 'rmsprop'])
+parser.add_argument('--loss', type=str, default='MSE', choices=['MSE', 'L1'])
 
 arg = parser.parse_args()
 
@@ -39,6 +42,10 @@ def transform():
     return Compose([
         ToTensor(),
     ])
+
+def psnr(img1, img2):
+    mse = torch.mean((img1-img2)**2)
+    return 20*torch.log10((1.0/torch.sqrt(mse)))
 
 def show_sample(data_loader):
     data_iter = iter(data_loader)
@@ -80,6 +87,9 @@ def train(epoch):
 
         print("===> Epoch[{}]({}/{}): Loss: {:.4f}.".format(epoch, iteration, len(train_data_loader), loss.data))
 
+def checkpoint(epoch):
+    output_path = arg.save_dir+"checkpoint_cnn_epoch5.pth"
+    torch.save(model.state_dict(), output_path)
 
 if __name__ == '__main__':
     print('---Loading dataset---')
@@ -88,7 +98,38 @@ if __name__ == '__main__':
     train_data_loader = DataLoader(dataset=train_set,batch_size=arg.batch_size, shuffle=True)
     #show_sample(train_data_loader)
 
+    pretrain = False
     model = CNN(channels=3, filters=64, features=256, scale_fact=arg.upscale_fact)
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=arg.rate)
-    train(0)
+
+    if arg.pretrain_path is not None:
+        pretrain = True
+        model.load_state_dict(torch.load(arg.pretrain_path))
+
+    if arg.loss == 'L1':
+        criterion = nn.L1Loss()
+    else:
+        criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=arg.rate, betas=(0.9, 0.999), eps=1e-8)
+    if not pretrain:
+        for epoch in range(arg.num_epochs + 1):
+            train(epoch)
+            if epoch%10 == 0:
+                checkpoint(epoch)
+
+    # test output of model
+    test_img = next(iter(train_data_loader))
+    test_img_out = test_img[0][0]
+    test_img_in = test_img[1][0].reshape(1, 3, 250, 250)
+    test_output = model(test_img_in).detach()
+    test_output = test_output.numpy().squeeze().transpose(1, 2, 0)
+    plt.hist(test_output[:, :, 0].flatten(), color='red', alpha=0.5)
+    plt.hist(test_output[:, :, 1].flatten(), color='green', alpha=0.5)
+    plt.hist(test_output[:, :, 2].flatten(), color='blue', alpha=0.5)
+    plt.show()
+    plt.figure()
+    plt.imshow(test_img[1][0].numpy().transpose(1,2,0))
+    plt.figure()
+    plt.imshow(test_output)
+    plt.figure()
+    plt.imshow(test_img_out.numpy().transpose(1,2,0))
+    plt.show()
