@@ -74,7 +74,7 @@ class DeconvBlock(nn.Module):
 # https://github.com/alterzero/DBPN-Pytorch/blob/master/base_networks.py
 # believe they are used to extract features from various sized blocks of pixels
 class UpBlock(torch.nn.Module):
-    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, activation='prelu', norm=None):
+    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, activation='prelu'):
         super(UpBlock, self).__init__()
 
         self.up_conv1 = DeconvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
@@ -89,13 +89,45 @@ class UpBlock(torch.nn.Module):
 
 
 class DownBlock(torch.nn.Module):
-    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, activation='prelu', norm=None):
+    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, activation='prelu'):
         super(DownBlock, self).__init__()
         self.down_conv1 = ConvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
         self.down_conv2 = DeconvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
         self.down_conv3 = ConvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
 
     def forward(self, x):
+        l0 = self.down_conv1(x)
+        h0 = self.down_conv2(l0)
+        l1 = self.down_conv3(h0 - x)
+        return l1 + l0
+
+
+class Down_UpBlock(torch.nn.Module):
+    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, num_stages=1, activation='prelu'):
+        super(Down_UpBlock, self).__init__()
+        self.conv = ConvBlock(num_filter * num_stages, num_filter, 1, 1, 0, activation)
+        self.up_conv1 = DeconvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+        self.up_conv2 = ConvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+        self.up_conv3 = DeconvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+
+    def forward(self, x):
+        x = self.conv(x)
+        h0 = self.up_conv1(x)
+        l0 = self.up_conv2(h0)
+        h1 = self.up_conv3(l0 - x)
+        return h1 + h0
+
+
+class Up_DownBlock(torch.nn.Module):
+    def __init__(self, num_filter, kernel_size=8, stride=4, padding=2, num_stages=1, activation='prelu'):
+        super(Up_DownBlock, self).__init__()
+        self.conv = ConvBlock(num_filter * num_stages, num_filter, 1, 1, 0, activation)
+        self.down_conv1 = ConvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+        self.down_conv2 = DeconvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+        self.down_conv3 = ConvBlock(num_filter, num_filter, kernel_size, stride, padding, activation)
+
+    def forward(self, x):
+        x = self.conv(x)
         l0 = self.down_conv1(x)
         h0 = self.down_conv2(l0)
         l1 = self.down_conv3(h0 - x)
